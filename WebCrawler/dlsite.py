@@ -182,8 +182,8 @@ def getDirector(html):
 def getOutline(html):
     try:
         total = []
-        #result = html.xpath('//*[@class="work_parts_area"]/p/text()')
-        result = html.xpath('//div[@class="work_parts type_text"]')
+        result = html.xpath('//*[@class="work_parts_area"]/p/text()')
+        #result = html.xpath('//div[@class="work_parts type_text"]')
         for i in result:
             total.append(i.strip('\r\n'))
         result = str(total).strip(" ['']").replace("', '', '",r'\n').replace("', '",r'\n').strip(", '', '")
