@@ -17,7 +17,7 @@ GETCHU_DL_URL = 'https://dl.getchu.com/i/item_WORD_'
 
 def get_dl_getchu(number):
     if "item" in number or 'GETCHU' in number.upper():
-        number = re.findall('\d+',number)[0]
+        number = re.findall(r'\d+',number)[0]
     else:
         htmlcode = get_html(GETCHU_DL_SEARCH_URL.replace("_WORD_", number),
                             json_headers=JSON_HEADERS, cookies=COOKIES_DL)
@@ -26,7 +26,7 @@ def get_dl_getchu(number):
             '/html/body/div[1]/table/tr/td/table[4]/tr/td[2]/table/tr[2]/td/table/tr/td/table/tr/td[2]/div/a[1]/@href')
         if url == "":
             return None
-        number = re.findall('\d+', url)[0]
+        number = re.findall(r'\d+', url)[0]
     htmlcode = get_html(GETCHU_DL_URL.replace("_WORD_", number), json_headers=JSON_HEADERS, cookies=COOKIES_DL)
     getchu = Crawler(htmlcode)
     dic = {
@@ -36,16 +36,16 @@ def get_dl_getchu(number):
         "studio": getchu.getString("//td[contains(text(),'サークル')]/following-sibling::td/a/text()").strip(),
         "actor": getchu.getString("//td[contains(text(),'サークル')]/following-sibling::td/a/text()").strip(),
         "label": getchu.getString("//td[contains(text(),'サークル')]/following-sibling::td/a/text()").strip(),
-        "runtime": str(re.findall('\d+', str(getchu.getString(
+        "runtime": str(re.findall(r'\d+', str(getchu.getString(
             "//td[contains(text(),'画像数&ページ数')]/following-sibling::td/text()")))).strip(" ['']"),
         "release": getchu.getString("//td[contains(text(),'配信開始日')]/following-sibling::td/text()").replace("/", "-"),
         "tag": getchu.getStrings("//td[contains(text(),'趣向')]/following-sibling::td/a/text()"),
         "outline": getchu.getStrings("//*[contains(text(),'作品内容')]/following-sibling::td/text()"),
         "extrafanart": getchu.getStrings("//td[contains(@style,'background-color: #444444;')]/a/@href"),
         "series": getchu.getString("//td[contains(text(),'サークル')]/following-sibling::td/a/text()"),
-        "number": 'GETCHU-' + re.findall('\d+',number)[0],
+        "number": 'GETCHU-' + re.findall(r'\d+',number)[0],
         "imagecut": 4,
-        "year": str(re.findall('\d{4}', str(getchu.getString(
+        "year": str(re.findall(r'\d{4}', str(getchu.getString(
             "//td[contains(text(),'配信開始日')]/following-sibling::td/text()").replace("/", "-")))).strip(" ['']"),
         "actor_photo": "",
         "website": "https://dl.getchu.com/i/" + number,
@@ -85,9 +85,9 @@ def get_www_getchu(number):
         "outline": getchu.getStrings("//div[contains(text(),'商品紹介')]/following-sibling::div/text()"),
         "extrafanart": getchu.getStrings("//div[contains(text(),'サンプル画像')]/following-sibling::div/a/@href"),
         "series": getchu.getString("//td[contains(text(),'ジャンル：')]/following-sibling::td/text()").strip(),
-        "number": 'GETCHU-' + re.findall('\d+', url2.replace("http://www.getchu.com/soft.phtml?id=", ""))[0],
+        "number": 'GETCHU-' + re.findall(r'\d+', url2.replace("http://www.getchu.com/soft.phtml?id=", ""))[0],
         "imagecut": 0,
-        "year": str(re.findall('\d{4}', str(getchu.getString(
+        "year": str(re.findall(r'\d{4}', str(getchu.getString(
             "//td[contains(text(),'発売日：')]/following-sibling::td/a/text()").replace("/", "-")))).strip(" ['']"),
         "actor_photo": "",
         "website": url2,

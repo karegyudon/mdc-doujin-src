@@ -152,7 +152,7 @@ def main(number):
             "tag": fanza_Crawler.getFanzaStrings('ジャンル：'),
             "extrafanart": getExtrafanart(htmlcode),
             "label": label,
-            "year": re.findall('\d{4}',getRelease(fanza_Crawler))[0],  # str(re.search('\d{4}',getRelease(a)).group()),
+            "year": re.findall(r'\d{4}',getRelease(fanza_Crawler))[0],  # str(re.search('\d{4}',getRelease(a)).group()),
             "actor_photo": "",
             "website": chosen_url,
             "source": "fanza.py",

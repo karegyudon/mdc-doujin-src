@@ -27,7 +27,7 @@ def getActor(html):  # //*[@id="center_column"]/div[2]/div[1]/div/table/tbody/tr
             result = []
     except:
         result = []
-    print("[+]DEBUG-getActor:", result)
+    # print("[+]DEBUG-getActor:", result)
     return result
 def getActorPhoto(actor): #//*[@id="star_qdt"]/li/a/img
     try:
