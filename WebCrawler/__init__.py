@@ -12,6 +12,7 @@ from pathlib import Path
 from . import fanza
 from . import dlsite
 from . import getchu
+from . import jav321
 
 
 def get_data_state(data: dict) -> bool:  # 元数据获取失败检测
@@ -53,6 +54,7 @@ def get_data_from_json(file_number, oCC):
         "fanza": fanza.main,
         "dlsite": dlsite.main,
         "getchu": getchu.main,
+        "jav321": jav321.main,
     }
 
     conf = config.getInstance()
@@ -79,6 +81,11 @@ def get_data_from_json(file_number, oCC):
         elif "item" in file_number or "GETCHU" in file_number.upper():
             sources = ["getchu"]
             print("[+]DEBUG-init: getchu -" , lo_file_number)
+        elif re.match(r"[a-zA-Z]{3,4}-\d{3,4}", file_number):
+            # 对于符合jav标准格式的编号，使用jav321作为源
+            # 格式要求：3-4位英文字符开头，后续是一个"-"号再加上3-4位数字
+            sources = ["jav321"]
+            print("[+]DEBUG-init: jav321 -" , lo_file_number)
     
     print("[+]DEBUG-init:", sources)
     # check sources in func_mapping
