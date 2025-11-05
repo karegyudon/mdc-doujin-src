@@ -81,9 +81,8 @@ def get_data_from_json(file_number, oCC):
         elif "item" in file_number or "GETCHU" in file_number.upper():
             sources = ["getchu"]
             print("[+]DEBUG-init: getchu -" , lo_file_number)
-        elif re.match(r"[a-zA-Z]{3,4}-\d{3,4}", file_number):
-            # 对于符合jav标准格式的编号，使用jav321作为源
-            # 格式要求：3-4位英文字符开头，后续是一个"-"号再加上3-4位数字
+        elif re.match(r"[a-zA-Z]+-\d{3}", file_number):
+            # 格式要求：英文字符开头，后续一个"-"号，再加上3位数字
             sources = ["jav321"]
             print("[+]DEBUG-init: jav321 -" , lo_file_number)
     
