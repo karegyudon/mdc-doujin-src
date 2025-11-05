@@ -58,41 +58,38 @@ def get_data_from_json(file_number, oCC):
     conf = config.getInstance()
     # default fetch order list, from the beginning to the end
     sources = conf.sources().split(',')
-    def insert(sources,source):
-        if source in sources:
-            sources.insert(0, sources.pop(sources.index(source)))
-        return sources
+    # def insert(sources,source):
+    #     if source in sources:
+    #         sources.insert(0, sources.pop(sources.index(source)))
+    #     return sources
 
     if len(sources) <= len(func_mapping):
         # if the input file name matches certain rules,
         # move some web service to the beginning of the list
+        sources = []
         lo_file_number = file_number.lower()
-        if "item" in file_number or "GETCHU" in file_number.upper():
-            sources = insert(sources,"getchu")
+        # print("[+]DEBUG-init:", lo_file_number)
+        if "d_" in lo_file_number : 
+            print("[+]DEBUG-init: fanza -" , lo_file_number)
+            sources = ["fanza"]
         elif "rj" in lo_file_number or "vj" in lo_file_number or re.search(r"[\u3040-\u309F\u30A0-\u30FF]+", file_number):
-            sources = insert(sources, "getchu")
-            sources = insert(sources, "dlsite")
-        elif "gcolle" in sources and (re.search("\d{6}", file_number)):
-            sources = insert(sources,"gcolle")
-        elif re.search(r"^[a-z0-9]{3,}$", lo_file_number):
-            if "xcity" in sources:
-                sources = insert(sources,"xcity")
-            if "madou" in sources:
-                sources = insert(sources,"madou")
-        elif "madou" in sources and (
-                re.search(r"^[a-z0-9]{3,}-[0-9]{1,}$", lo_file_number)
-        ):
-            sources = insert(sources,"madou")
-
+            #sources = insert(sources, "getchu")
+            sources = ["dlsite"]
+            print("[+]DEBUG-init: dlsite -" , lo_file_number)
+        elif "item" in file_number or "GETCHU" in file_number.upper():
+            sources = ["getchu"]
+            print("[+]DEBUG-init: getchu -" , lo_file_number)
+    
+    print("[+]DEBUG-init:", sources)
     # check sources in func_mapping
-    todel = []
-    for s in sources:
-        if not s in func_mapping:
-            print('[!] Source Not Exist : ' + s)
-            todel.append(s)
-    for d in todel:
-        print('[!] Remove Source : ' + s)
-        sources.remove(d)
+    # todel = []
+    # for s in sources:
+    #     if not s in func_mapping:
+    #         print('[!] Source Not Exist : ' + s)
+    #         todel.append(s)
+    # for d in todel:
+    #     print('[!] Remove Source : ' + s)
+    #     sources.remove(d)
 
     json_data = {}
 
@@ -188,9 +185,10 @@ def get_data_from_json(file_number, oCC):
     while 'xxx' in tag:
         tag.remove('xxx')
     actor = str(actor_list).strip("[ ]").replace("'", '').replace(" ", '')
-
+    
     if title == '' or number == '':
-        print('[-]Movie Number or Title not found!')
+        # print('[-]Movie Number or Title not found!')
+        print('[-]Movie Number or Title not found!', title , number)
         return None
 
     # if imagecut == '3':

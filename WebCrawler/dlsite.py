@@ -114,12 +114,41 @@ def getRelease(html):
         return result
     except:
         return ''
+
 def getTag(html):
     try:
-        # 获取<div class="main_genre">下所有文本的内容
-        result = html.xpath('//div[@class="main_genre"]//text()')
-        # 过滤掉空白文本并去除首尾空格
-        result = [text.strip() for text in result if text.strip()]
+        # 更准确地获取标签信息，排除"文件容量"等非标签信息
+        result = []
+        
+        # 获取所有的<div class="main_genre">元素
+        all_genre_divs = html.xpath('//div[@class="main_genre"]')
+        
+        # 定义需要跳过的th标签关键词
+        skip_keywords = ["文件容量"]
+        
+        for div in all_genre_divs:
+            # 查找这个div的祖先元素中的th标签
+            ancestor_th = div.xpath('./ancestor::tr/th')
+            
+            # 检查是否应该跳过这个div
+            should_skip = False
+            if ancestor_th:
+                # 获取th标签的文本内容
+                th_text_nodes = ancestor_th[0].xpath('.//text()')
+                if th_text_nodes:
+                    th_text = ''.join(th_text_nodes).strip()
+                    # 检查th文本是否包含跳过关键词
+                    for keyword in skip_keywords:
+                        if keyword in th_text:
+                            should_skip = True
+                            break
+            
+            # 如果不应该跳过，则获取这个div的文本内容
+            if not should_skip:
+                texts = div.xpath('.//text()')
+                texts = [text.strip() for text in texts if text.strip()]
+                result.extend(texts)
+        
         # print("[+]DEBUG-getTag:", result)
         return result
     except:
@@ -186,7 +215,7 @@ def getOutline(html):
         #result = html.xpath('//div[@class="work_parts type_text"]')
         for i in result:
             total.append(i.strip('\r\n'))
-        result = str(total).strip(" ['']").replace("', '', '",r'\n').replace("', '",r'\n').strip(", '', '")
+        result = str(total).strip(" ['']").replace("', '', '", r'\n').replace("', '", r'\n').replace("\\u3000", r' ').strip(", '', '")
         # print("[+]DEBUG-getOutline:", result)
         return result
     except:
@@ -221,8 +250,8 @@ def main(number):
             print("[+]DEBUG:", str(target_url))
             htmlcode = get_html(target_url, cookies={'locale': 'zh-cn'}, encoding='utf-8')
             # DEBUG: 将html内容写入debug.txt文件
-            #with open('debug.txt', 'w', encoding='utf-8') as f:
-            #    f.write(htmlcode)
+            with open('debug.txt', 'w', encoding='utf-8') as f:
+               f.write(htmlcode)
             html = etree.fromstring(htmlcode, etree.HTMLParser())
         else:
             htmlcode = get_html(f'https://www.dlsite.com/maniax/fsr/=/language/jp/sex_category/male/keyword/{number}/order/trend/work_type_category/movie', cookies={'locale': 'zh-cn'})

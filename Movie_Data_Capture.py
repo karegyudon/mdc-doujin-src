@@ -25,7 +25,7 @@ from core import core_main, core_main_no_net_op, moveFailedFolder
 def check_update(local_version):
     htmlcode = ""
     try:
-        htmlcode = get_html("https://api.github.com/repos/yoshiko2/Movie_Data_Capture/releases/latest")
+        htmlcode = get_html("https://api.github.com/repos/karegyudon/mdc-doujin-src/releases/latest")
     except:
         print("===== Failed to connect to github =====")
         print("========== AUTO EXIT IN 60s ===========")
@@ -37,7 +37,7 @@ def check_update(local_version):
     if local_version < remote:
         print("[*]" + ("* New update " + str(data["tag_name"]) + " *").center(54))
         print("[*]" + "↓ Download ↓".center(54))
-        print("[*]https://github.com/yoshiko2/Movie_Data_Capture/releases")
+        print("[*]https://github.com/karegyudon/mdc-doujin-src/releases")
         print("[*]======================================================")
 
 
