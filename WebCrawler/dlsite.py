@@ -249,8 +249,8 @@ def main(number):
             target_url = 'https://www.dlsite.com/maniax/work/=/product_id/' + number + '.html/?locale=zh_CN'
             print("[+]DEBUG:", str(target_url))
             htmlcode = get_html(target_url, cookies={'locale': 'zh-cn'}, encoding='utf-8')
-            # DEBUG: 将html内容写入debug.txt文件
-            with open('debug.txt', 'w', encoding='utf-8') as f:
+            # DEBUG: 将html内容写入debug.html文件
+            with open('debug.html', 'w', encoding='utf-8') as f:
                f.write(htmlcode)
             html = etree.fromstring(htmlcode, etree.HTMLParser())
         else:
