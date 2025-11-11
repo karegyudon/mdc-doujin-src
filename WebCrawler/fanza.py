@@ -47,7 +47,7 @@ def get_html_from_browserless(url, max_retries=3, timeout=70):
         if not browserless_url:
             browserless_url = "http://10.10.32.153:3000/webdriver"
         
-        print(f"[+]DEBUG-webdriver: 配置的WebDriver服务地址: {browserless_url}")
+        # print(f"[+]DEBUG-webdriver: 配置的WebDriver服务地址: {browserless_url}")
     except Exception as e:
         print(f"[-]DEBUG-webdriver: 获取配置失败: {str(e)}")
         browserless_url = "http://10.10.32.153:3000/webdriver"
@@ -95,11 +95,12 @@ def get_html_from_browserless(url, max_retries=3, timeout=70):
             try:
                 with open(debug_file, "w", encoding="utf-8") as f:
                     f.write(final_html)
-                print(f"[+]DEBUG-webdriver: 页面内容已保存到: {debug_file}")
+                # print(f"[+]DEBUG-webdriver: 页面内容已保存到: {debug_file}")
             except Exception as write_error:
-                print(f"[-]DEBUG-webdriver: 写入调试文件失败: {str(write_error)}")
+                # 处理写入调试文件失败的情况
+                pass
             
-            print(f"[+]DEBUG-webdriver: 成功获取URL内容，长度: {len(final_html)} 字符")
+            # print(f"[+]DEBUG-webdriver: 成功获取URL内容，长度: {len(final_html)} 字符")
             return final_html
             
         except Exception as e:
@@ -233,11 +234,152 @@ class fanzaCrawler(Crawler):
             return ""
 
 
-def getRelease(fanza_Crawler):
-    result = fanza_Crawler.getFanzaString('発売日：')
-    if result == '' or result == '----':
-        result = fanza_Crawler.getFanzaString('配信開始日：')
-    return result.replace("/", "-").strip('\\n')
+def getRelease(html):
+    """
+    从HTML源码中提取发布日期
+    :param html: HTML源码字符串
+    :return: 格式化后的日期字符串，如'2023-01-01'
+    """
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # 要搜索的关键词
+        keywords = ['配信開始日', '発売日']
+        
+        # 遍历关键词，寻找匹配的内容
+        for keyword in keywords:
+            # 查找包含关键词的元素
+            elements = soup.find_all(string=lambda text: text and keyword in text)
+            
+            for element in elements:
+                # 获取包含该文本的父元素
+                parent = element.find_parent()
+                if parent:
+                    # 查找下一个具有informationList__txt类的兄弟元素
+                    next_info = parent.find_next(class_='informationList__txt')
+                    if next_info:
+                        # 获取文本内容并处理
+                        date_text = next_info.get_text().strip()
+                        
+                        # 去掉时间部分，只保留日期（假设格式为"2014/04/25 10:00"）
+                        if date_text:
+                            # 按空格分割，取第一部分作为日期
+                            date_part = date_text.split()[0] if ' ' in date_text else date_text
+                            
+                            # 格式化为标准格式（将/替换为-）
+                            formatted_date = date_part.replace('/', '-')
+                            return formatted_date
+        
+        # 如果上述方法都失败，尝试使用原始方法作为后备
+        import re
+        # 使用正则表达式搜索日期格式
+        date_patterns = [
+            r'(\d{4}/\d{2}/\d{2})',  # 2014/04/25格式
+            r'(\d{4}-\d{2}-\d{2})'   # 2014-04-25格式
+        ]
+        
+        for pattern in date_patterns:
+            match = re.search(pattern, html)
+            if match:
+                return match.group(1).replace('/', '-')
+                
+    except Exception as e:
+        print(f"[-]Error in getRelease: {e}")
+    
+    # 如果无法提取日期，返回空字符串
+    return ''
+
+def getYear(release):
+    """
+    从release字符串中提取年份数字
+    :param release: 格式如'2023-01-01'或'2023/01/01'的日期字符串
+    :return: 年份数字字符串，如'2023'
+    """
+    try:
+        import re
+        # 使用正则表达式匹配年份（4位数字）
+        year_match = re.search(r'(\d{4})', release)
+        if year_match:
+            return year_match.group(1)
+        
+        # 如果没有找到4位数字，尝试按分隔符拆分
+        if '-' in release or '/' in release:
+            parts = release.replace('/', '-').split('-')
+            if parts and len(parts[0]) == 4 and parts[0].isdigit():
+                return parts[0]
+    except Exception as e:
+        print(f"[-]Error in getYear: {e}")
+    
+    # 如果无法提取年份，返回空字符串
+    return ''
+
+def getTags(html):
+    """
+    从HTML源码中提取标签列表
+    :param html: HTML源码字符串
+    :return: 标签文本数组
+    """
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # 查找<ul class="genreTagList">标签
+        genre_tag_list = soup.find('ul', class_='genreTagList')
+        
+        if genre_tag_list:
+            # 获取所有<div class="genreTag__item">标签
+            tag_items = genre_tag_list.find_all('div', class_='genreTag__item')
+            
+            # 提取每个标签的文本内容
+            tags = []
+            for item in tag_items:
+                tag_text = item.get_text().strip()
+                if tag_text:  # 确保标签不为空
+                    tags.append(tag_text)
+            
+            return tags
+    except Exception as e:
+        print(f"[-]Error in getTags: {e}")
+    
+    # 如果无法提取标签，返回空数组
+    return []
+
+def getSeries(html):
+    """
+    从HTML源码中提取系列信息
+    :param html: HTML源码字符串
+    :return: 系列名称字符串
+    """
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # 查找dt标签，class为informationList__ttl，文本内容包含'シリーズ'
+        series_dt = soup.find('dt', {'class': 'informationList__ttl', 'string': 'シリーズ'})
+        
+        # 如果直接查找失败，尝试更通用的方法
+        if not series_dt:
+            series_dts = soup.find_all('dt', class_='informationList__ttl')
+            for dt in series_dts:
+                if dt.string and 'シリーズ' in dt.string:
+                    series_dt = dt
+                    break
+        
+        if series_dt:
+            # 获取dt标签后的第一个informationList__txt标签
+            series_txt = series_dt.find_next(class_='informationList__txt')
+            if series_txt:
+                series_text = series_txt.get_text().strip()
+                # 如果内容是'----'，返回空字符串
+                if series_text == '----':
+                    return ''
+                return series_text
+    except Exception as e:
+        print(f"[-]Error in getSeries: {e}")
+    
+    # 如果无法提取系列信息，返回空字符串
+    return ''
 
 
 def getCover(html, number):
@@ -261,14 +403,32 @@ def getCover(html, number):
 
 def getOutline(html):
     try:
-        result = str(html.xpath("//div[@class='mg-b20 lh4']/text()")[0]).replace("\n", "")
-        if result == "":
-            result = str(html.xpath("//div[@class='mg-b20 lh4']//p/text()")[0]).replace("\n", "")
-    except:
-        # (TODO) handle more edge case
-        # print(html)
-        return ""
-    return result
+        # 首先尝试获取<p class="summary__txt">下的文本内容
+        # 使用BeautifulSoup来处理br标签的替换
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(etree.tostring(html), 'html.parser')
+        summary_tag = soup.find('p', class_='summary__txt')
+        if summary_tag:
+            # 替换所有br标签为/n
+            for br in summary_tag.find_all('br'):
+                br.replace_with('\n')
+
+            result = summary_tag.get_text(separator='', strip=True)
+            return result
+        
+        # 如果没有找到summary__txt类，则尝试原来的方法
+        try:
+            result = str(html.xpath("//div[@class='mg-b20 lh4']/text()")[0]).replace("\n", "")
+            if result == "":
+                result = str(html.xpath("//div[@class='mg-b20 lh4']//p/text()")[0]).replace("\n", "")
+            return result
+        except:
+            pass
+    except Exception as e:
+        print(f"[-]Error in getOutline: {e}")
+        # 静默失败，保持原有行为
+    # 如果所有方法都失败，返回空字符串
+    return ""
 
 
 def getExtrafanart(htmlcode):  # 获取剧照
@@ -302,10 +462,10 @@ def main(number):
     try:
         # 使用统一的browserless函数获取网页内容
         target_url = "https://www.dmm.co.jp/dc/doujin/-/detail/=/cid=" + number.lower() + "/"
-        print(f"[+]DEBUG-fanza: Target URL: {target_url}")
+        # print(f"[+]DEBUG-fanza: Target URL: {target_url}")
         
         bypass_url = "https://www.dmm.co.jp/age_check/=/declared=yes/?" + urlencode({'rurl': target_url})
-        print(f"[+]DEBUG-fanza: Fetching URL with browserless: {bypass_url}")
+        # print(f"[+]DEBUG-fanza: Fetching URL with browserless: {bypass_url}")
         
         htmlcode = get_html_from_browserless(bypass_url)
             
@@ -316,12 +476,12 @@ def main(number):
         title = ""
         try:
             title = fanza_Crawler.getMetadata('og:title').strip()
-            print(f"[+]DEBUG-fanza: Extracted title: {title}")
+            # print(f"[+]DEBUG-fanza: Extracted title: {title}")
         except Exception as e:
             print(f"[-]Error extracting title: {e}")
     
         # 解析htmlcode以获取数据
-        print("[+]DEBUG-fanza-html: parse begin")
+        # print("[+]DEBUG-fanza-html: parse begin")
         
         # 检查htmlcode是否有效
         if not htmlcode or not isinstance(htmlcode, str):
@@ -343,22 +503,22 @@ def main(number):
                 data = {
                     "title": title if title else safe_get_metadata('og:title'),
                     "studio": fanza_Crawler.getStudio(),
-                    "outline": '',
+                    "outline": getOutline(html),
                     "runtime": '',
                     "director": '',
                     "actor": '',
-                    "release": '',
+                    "release": getRelease(htmlcode),
                     "number": number,
                     "cover": safe_get_metadata('og:image'),
                     "imagecut": 1,
-                    "tag": '',
+                    "tag": getTags(htmlcode),
                     "extrafanart": '',
                     "label": '',
-                    "year": '',
+                    "year": getYear(getRelease(htmlcode)),
                     "actor_photo": '',
                     "website": "https://www.dmm.co.jp/dc/doujin/-/detail/=/cid=" + number,
                     "source": "fanza.py",
-                    "series": '',
+                    "series": getSeries(htmlcode),
                 }
             except Exception as e:
                 print(f"[-]Error parsing HTML content: {str(e)}")
@@ -391,39 +551,5 @@ def main(number):
         }
         return json.dumps(data, ensure_ascii=False)
 
-
-# def main_htmlcode(number):
-#     # fanza allow letter + number + underscore, normalize the input here
-#     # @note: I only find the usage of underscore as h_test123456789
-#     htmlcode = get_html("https://www.dmm.co.jp/dc/doujin/-/detail/=/cid=" + number)
-
-#     # fanza_search_number = number
-#     # # AV_Data_Capture.py.getNumber() over format the input, restore the h_ prefix
-#     # if fanza_search_number.startswith("h-"):
-#     #     fanza_search_number = fanza_search_number.replace("h-", "h_")
-
-#     # # fanza_search_number = re.sub(r"[^0-9a-zA-Z_]", "", fanza_search_number).lower()
-
-#     # fanza_urls = [
-#     #     "https://www.dmm.co.jp/dc/doujin/-/detail/=/cid=",
-#     #     "https://www.dmm.co.jp/digital/anime/-/detail/=/cid=",
-#     #     "https://www.dmm.co.jp/mono/anime/-/detail/=/cid=",
-#     # ]
-#     # chosen_url = ""
-#     # for url in fanza_urls:
-#     #     chosen_url = url + fanza_search_number
-#     #     htmlcode = get_html(chosen_url)
-#     #     if "404 Not Found" not in htmlcode:
-#     #         break
-#     # if "404 Not Found" in htmlcode:
-#     #     return json.dumps({"title": "",})
-#     return htmlcode
-
 if __name__ == "__main__":
-    # print(main("DV-1562"))
-    # print(main("96fad1217"))
-    # print(main("AES-002"))
-    # print(main("MIAA-391"))
-    # print(main("OBA-326"))
-    # 只保留一个测试调用，避免重复输出调试信息
-    print(main("AES-002"))
+    print(main("d_sm0002"))
