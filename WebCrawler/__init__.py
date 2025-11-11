@@ -51,7 +51,7 @@ def get_data_from_json(file_number, oCC):
         info_mapping_data = etree.parse(str(Path.home() / '.local' / 'share' / 'mdc' / 'mapping_info.xml'))
 
     func_mapping = {
-        "fanza": fanza.main,
+        # "fanza": fanza.main,  # 暂时禁用fanza功能
         "dlsite": dlsite.main,
         "getchu": getchu.main,
         "jav321": jav321.main,
@@ -73,7 +73,7 @@ def get_data_from_json(file_number, oCC):
         # print("[+]DEBUG-init:", lo_file_number)
         if "d_" in lo_file_number : 
             print("[+]DEBUG-init: fanza -" , lo_file_number)
-            sources = ["fanza"]
+            # sources = ["fanza"]  # 暂时禁用fanza功能
         elif "rj" in lo_file_number or "vj" in lo_file_number or re.search(r"[\u3040-\u309F\u30A0-\u30FF]+", file_number):
             #sources = insert(sources, "getchu")
             sources = ["dlsite"]
