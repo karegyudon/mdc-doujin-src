@@ -57,34 +57,27 @@ def get_data_from_json(file_number, oCC):
         "jav321": jav321.main,
     }
 
-    conf = config.getInstance()
-    # default fetch order list, from the beginning to the end
-    sources = conf.sources().split(',')
-    # def insert(sources,source):
-    #     if source in sources:
-    #         sources.insert(0, sources.pop(sources.index(source)))
-    #     return sources
-
-    if len(sources) <= len(func_mapping):
-        # if the input file name matches certain rules,
-        # move some web service to the beginning of the list
-        sources = []
-        lo_file_number = file_number.lower()
-        # print("[+]DEBUG-init:", lo_file_number)
-        if "d_" in lo_file_number : 
-            print("[+]DEBUG-init: fanza -" , lo_file_number)
-            # sources = ["fanza"]  # 暂时禁用fanza功能
-        elif "rj" in lo_file_number or "vj" in lo_file_number or re.search(r"[\u3040-\u309F\u30A0-\u30FF]+", file_number):
-            #sources = insert(sources, "getchu")
-            sources = ["dlsite"]
-            print("[+]DEBUG-init: dlsite -" , lo_file_number)
-        elif "item" in file_number or "GETCHU" in file_number.upper():
-            sources = ["getchu"]
-            print("[+]DEBUG-init: getchu -" , lo_file_number)
-        elif re.match(r"[a-zA-Z]+-\d{3}", file_number):
-            # 格式要求：英文字符开头，后续一个"-"号，再加上3位数字
-            sources = ["jav321"]
-            print("[+]DEBUG-init: jav321 -" , lo_file_number)
+    # 不再从配置文件读取sources，而是完全基于文件名特征判断
+    sources = []
+    lo_file_number = file_number.lower()
+    
+    # 根据文件名特征设置对应的源，按照优先级排序
+    if "rj" in lo_file_number or "vj" in lo_file_number or re.search(r"[\u3040-\u309F\u30A0-\u30FF]+", file_number):
+        sources = ["dlsite"]
+        print("[+]DEBUG-init: dlsite -" , lo_file_number)
+    elif re.match(r"[a-zA-Z]+-\d{3}", file_number):
+        # 格式要求：英文字符开头，后续一个"-"号，再加上3位数字
+        sources = ["jav321"]
+        print("[+]DEBUG-init: jav321 -" , lo_file_number)
+    elif "item" in file_number or "GETCHU" in file_number.upper():
+        sources = ["getchu"]
+        print("[+]DEBUG-init: getchu -" , lo_file_number)
+    elif "d_" in lo_file_number : 
+        print("[+]DEBUG-init: fanza -" , lo_file_number)
+        # sources = ["fanza"]  # 暂时禁用fanza功能
+    else:
+        print("[!] 无法识别文件名格式，没有找到匹配的数据源")
+        return {}
     
     print("[+]DEBUG-init:", sources)
     # check sources in func_mapping
