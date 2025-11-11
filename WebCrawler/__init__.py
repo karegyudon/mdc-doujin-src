@@ -51,7 +51,7 @@ def get_data_from_json(file_number, oCC):
         info_mapping_data = etree.parse(str(Path.home() / '.local' / 'share' / 'mdc' / 'mapping_info.xml'))
 
     func_mapping = {
-        # "fanza": fanza.main,  # 暂时禁用fanza功能
+        "fanza": fanza.main,  # 暂时禁用fanza功能
         "dlsite": dlsite.main,
         "getchu": getchu.main,
         "jav321": jav321.main,
@@ -74,7 +74,7 @@ def get_data_from_json(file_number, oCC):
         print("[+]DEBUG-init: getchu -" , lo_file_number)
     elif "d_" in lo_file_number : 
         print("[+]DEBUG-init: fanza -" , lo_file_number)
-        # sources = ["fanza"]  # 暂时禁用fanza功能
+        sources = ["fanza"]
     else:
         print("[!] 无法识别文件名格式，没有找到匹配的数据源")
         return {}
@@ -92,6 +92,9 @@ def get_data_from_json(file_number, oCC):
 
     json_data = {}
 
+    # 获取配置实例
+    conf = config.getInstance()
+    
     if conf.multi_threading():
         pool = ThreadPool(processes=len(conf.sources().split(',')))
 

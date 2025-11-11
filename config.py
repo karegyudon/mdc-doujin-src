@@ -300,6 +300,18 @@ class Config:
             return iniProxy
         except ValueError:
             self._exit("common")
+            
+    def puppeteer_url(self):
+        if not self.conf.has_section("puppeteer"):
+            return "http://localhost:9222"
+        try:
+            puppeteer_url = self.conf.get("puppeteer", "puppeteer_url")
+            if puppeteer_url.strip():
+                return puppeteer_url
+            else:
+                return "http://localhost:9222"
+        except Exception:
+            return "http://localhost:9222"
 
     def cacert_file(self) -> str:
         return self.conf.get('proxy', 'cacert_file')

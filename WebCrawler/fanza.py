@@ -1,24 +1,180 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
 import sys
 sys.path.append('../')
 from urllib.parse import urlencode
+import time
+from lxml import etree
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import re
+import urllib.parse
+import requests
+from bs4 import BeautifulSoup
+import os
+
+def get_html_from_browserless(url, max_retries=3, timeout=70):
+    """
+    使用Selenium WebDriver从指定URL获取HTML内容
+    
+    参数:
+        url: 要获取的网页URL
+        max_retries: 最大重试次数
+        timeout: 请求超时时间（秒）
+        
+    返回:
+        获取到的HTML内容字符串，如果失败则返回空字符串
+    """
+    retry_count = 0
+    last_error = None
+    
+    # 获取browserless配置
+    try:
+        # 尝试使用绝对导入
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from config import getInstance
+            config = getInstance()
+            browserless_url = config.puppeteer_url() if config and hasattr(config, 'puppeteer_url') else None
+        except:
+            # 如果绝对导入失败，回退到默认值
+            browserless_url = None
+            
+        # 如果配置不存在或无效，使用默认值
+        if not browserless_url:
+            browserless_url = "http://10.10.32.153:3000/webdriver"
+        
+        print(f"[+]DEBUG-webdriver: 配置的WebDriver服务地址: {browserless_url}")
+    except Exception as e:
+        print(f"[-]DEBUG-webdriver: 获取配置失败: {str(e)}")
+        browserless_url = "http://10.10.32.153:3000/webdriver"
+    
+    # 重试逻辑
+    while retry_count < max_retries:
+        driver = None
+        try:
+            print(f"[+]DEBUG-webdriver: 获取URL内容: {url} (尝试 {retry_count + 1}/{max_retries})")
+            
+            # 配置Chrome选项
+            chrome_options = Options()
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--disable-gpu')
+            # chrome_options.add_argument('--window-size=1920,1080')
+            # chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+            
+            # 初始化WebDriver
+            driver = webdriver.Remote(
+                command_executor=browserless_url,
+                options=chrome_options
+            )
+
+            # 访问URL
+            driver.get(url)
+            
+            # 等待页面加载完成
+            # time.sleep(3)
+            
+            # 获取页面内容
+            final_html = driver.page_source
+            
+            # 验证内容有效性
+            # if not final_html or len(final_html.strip()) < 100:
+            #     print(f"[-]DEBUG-webdriver: 获取到的HTML内容过短或为空")
+            #     retry_count += 1
+            #     last_error = "Empty or invalid HTML content"
+            #     time.sleep(2)
+            #     continue
+            
+            # 写入调试文件
+            debug_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "webdriver_debug.html")
+            try:
+                with open(debug_file, "w", encoding="utf-8") as f:
+                    f.write(final_html)
+                print(f"[+]DEBUG-webdriver: 页面内容已保存到: {debug_file}")
+            except Exception as write_error:
+                print(f"[-]DEBUG-webdriver: 写入调试文件失败: {str(write_error)}")
+            
+            print(f"[+]DEBUG-webdriver: 成功获取URL内容，长度: {len(final_html)} 字符")
+            return final_html
+            
+        except Exception as e:
+            error_msg = f"获取HTML内容异常: {str(e)}"
+            print(f"[-]DEBUG-webdriver: {error_msg}")
+            last_error = error_msg
+            retry_count += 1
+            time.sleep(2)
+        finally:
+            # 确保关闭driver
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
+            
+    # 所有重试都失败
+    print(f"[-]DEBUG-webdriver: 所有重试都失败，最后错误: {last_error}")
+    return ""
+
+import json
 
 from ADC_function import *
 from WebCrawler.crawler import *
+import config
 
 class fanzaCrawler(Crawler):
     def getFanzaString(self,string):
-        result1 = str(self.html.xpath("//td[contains(text(),'"+string+"')]/following-sibling::td/a/text()")).strip(" ['']")
-        result2 = str(self.html.xpath("//td[contains(text(),'"+string+"')]/following-sibling::td/text()")).strip(" ['']")
-        return result1+result2
+        try:
+            # 检查self.html是否存在且有xpath方法
+            if not hasattr(self, 'html') or self.html is None or not hasattr(self.html, 'xpath'):
+                return ""
+            
+            result1 = ""
+            result2 = ""
+            try:
+                xpath_result = self.html.xpath("//td[contains(text(),'"+string+"')]/following-sibling::td/a/text()")
+                if xpath_result:
+                    result1 = str(xpath_result).strip(" ['']")
+            except:
+                pass
+                
+            try:
+                xpath_result = self.html.xpath("//td[contains(text(),'"+string+"')]/following-sibling::td/text()")
+                if xpath_result:
+                    result2 = str(xpath_result).strip(" ['']")
+            except:
+                pass
+                
+            return result1+result2
+        except Exception as e:
+            print(f"[-]Error in getFanzaString for '{string}': {e}")
+            return ""
 
     def getFanzaStrings(self, string):
-        result1 = self.html.xpath("//td[contains(text(),'" + string + "')]/following-sibling::td/a/text()")
-        if len(result1) > 0:
-            return result1
-        result2 = self.html.xpath("//td[contains(text(),'" + string + "')]/following-sibling::td/text()")
-        return result2
+        try:
+            # 检查self.html是否存在且有xpath方法
+            if not hasattr(self, 'html') or self.html is None or not hasattr(self.html, 'xpath'):
+                return []
+            
+            try:
+                result1 = self.html.xpath("//td[contains(text(),'" + string + "')]/following-sibling::td/a/text()")
+                if isinstance(result1, list) and len(result1) > 0:
+                    return result1
+            except:
+                pass
+                
+            try:
+                result2 = self.html.xpath("//td[contains(text(),'" + string + "')]/following-sibling::td/text()")
+                return result2 if isinstance(result2, list) else []
+            except:
+                return []
+        except Exception as e:
+            print(f"[-]Error in getFanzaStrings for '{string}': {e}")
+            return []
 
     def getMetadata(self, property_name):
         """
@@ -27,10 +183,19 @@ class fanzaCrawler(Crawler):
         :return: 对应的content属性内容
         """
         try:
+            # 检查self.html是否存在且有xpath方法
+            if not hasattr(self, 'html') or self.html is None or not hasattr(self.html, 'xpath'):
+                print(f"[-]Error: Invalid html object when getting metadata for {property_name}")
+                return ""
+            
             result = self.html.xpath("//meta[@property='" + property_name + "']/@content")
             if result:
-                return result[0].strip()
+                return result[0].strip() if isinstance(result[0], str) else ""
             else:
+                # 尝试使用name属性查找meta标签
+                result_name = self.html.xpath("//meta[@name='" + property_name + "']/@content")
+                if result_name:
+                    return result_name[0].strip() if isinstance(result_name[0], str) else ""
                 return ""
         except Exception as e:
             print(f"[-]Error getting metadata for property {property_name}: {e}")
@@ -42,12 +207,29 @@ class fanzaCrawler(Crawler):
         :return: Studio名称或空字符串
         """
         try:
-            studio_elements = self.html.xpath("//div[@class='circleName']//a/text()")
-            if studio_elements:
-                return studio_elements[0].strip()
-            else:
+            # 检查self.html是否存在且有xpath方法
+            if not hasattr(self, 'html') or self.html is None or not hasattr(self.html, 'xpath'):
                 return ""
-        except:
+            
+            # 尝试多种可能的选择器
+            selectors = [
+                "//div[@class='circleName']//a/text()",
+                "//div[contains(@class, 'circleName')]//a/text()",
+                "//td[contains(text(),'メーカー：')]/following-sibling::td/a/text()",
+                "//td[contains(text(),'メーカー：')]/following-sibling::td/text()"
+            ]
+            
+            for selector in selectors:
+                try:
+                    studio_elements = self.html.xpath(selector)
+                    if studio_elements and isinstance(studio_elements[0], str):
+                        return studio_elements[0].strip()
+                except:
+                    continue
+            
+            return ""
+        except Exception as e:
+            print(f"[-]Error in getStudio: {e}")
             return ""
 
 
@@ -105,122 +287,109 @@ def getExtrafanart(htmlcode):  # 获取剧照
             return s
     return ''
 
+# 注意: 统一使用文件顶部定义的get_html_from_browserless函数
+
 def main(number):
-    # fanza allow letter + number + underscore, normalize the input here
-    # @note: I only find the usage of underscore as h_test123456789
-    # print("[+]DEBUG-fanza:", number)
+    """
+    主函数，用于从fanza网站获取指定编号的内容信息
     
-    htmlcode = ""
-    cookies = {}
-    title = ""
+    参数:
+        number: 要查询的编号
     
-    # 检查是否存在cookie文件，如果存在则优先使用
-    if os.path.exists('fanza_cookie.txt'):
-        try:
-            with open('fanza_cookie.txt', 'r') as f:
-                cookies_str = f.read()
-                if cookies_str:
-                    import ast
-                    cookies = ast.literal_eval(cookies_str)
-        except Exception as e:
-            print(f"[-]Error reading cookies: {e}")
-            cookies = {}
-    
-    # 使用现有cookie尝试访问
-    htmlcode = get_html("https://www.dmm.co.jp/dc/doujin/-/detail/=/cid=" + number.lower() + "/", cookies=cookies)
-    
-    # 检查是否能正确获取到title
-    fanza_Crawler = fanzaCrawler(htmlcode)
+    返回:
+        包含内容信息的JSON字符串
+    """
     try:
-        title = fanza_Crawler.getMetadata('og:title').strip()
-    except:
-        title = ""
-    
-    # 如果title为空，说明需要重新获取cookie
-    if not title:
-        print("[+]DEBUG-fanza: title is empty, need to re-fetch cookies")
-        # 创建一个会话对象来处理cookie
-        import requests
-        session = requests.Session()
-        
-        # 第一次访问获取cookie
+        # 使用统一的browserless函数获取网页内容
         target_url = "https://www.dmm.co.jp/dc/doujin/-/detail/=/cid=" + number.lower() + "/"
-        try:
-            response = session.get(target_url)
-            # DEBUG: 将html内容写入f1.html文件
-            with open('f1.html', 'w', encoding='utf-8') as f:
-               f.write(response.text)
-
-            # 保存cookie到文件
-            with open('fanza_cookie.txt', 'w') as f:
-                f.write(str(session.cookies.get_dict()))
-            cookies = session.cookies.get_dict()
-        except Exception as e:
-            print(f"[-]Error getting initial cookies: {e}")
+        print(f"[+]DEBUG-fanza: Target URL: {target_url}")
         
-        # 第二次访问使用保存的cookie
-        encoded_url = urlencode("https://www.dmm.co.jp/dc/doujin/-/detail/=/cid=" + number.lower() + "/")
-        agecheckbypassurl = "https://www.dmm.co.jp/age_check/=/declared=yes/?rurl={}".format(encoded_url)
-        print("[+]DEBUG-fanza-html:", agecheckbypassurl)
+        bypass_url = "https://www.dmm.co.jp/age_check/=/declared=yes/?" + urlencode({'rurl': target_url})
+        print(f"[+]DEBUG-fanza: Fetching URL with browserless: {bypass_url}")
         
-        # 使用cookie进行第二次访问
-        htmlcode = get_html(agecheckbypassurl, cookies=cookies)
-        # DEBUG: 将html内容写入f2.html文件
-        with open('f2.html', 'w', encoding='utf-8') as f:
-               f.write(htmlcode)
-
-        # 第三次访问获取最终页面
-        htmlcode = get_html("https://www.dmm.co.jp/dc/doujin/-/detail/=/cid=" + number.lower() + "/", cookies=cookies)
-        
-        # DEBUG: 将html内容写入f3.html文件
-        with open('f3.html', 'w', encoding='utf-8') as f:
-               f.write(htmlcode)
-        
-        # 重新解析htmlcode以获取最新的数据
+        htmlcode = get_html_from_browserless(bypass_url)
+            
+        # 初始化爬虫类
         fanza_Crawler = fanzaCrawler(htmlcode)
+            
+        # 尝试提取标题
+        title = ""
         try:
             title = fanza_Crawler.getMetadata('og:title').strip()
-        except:
-            title = ""
-        
-        # 再次检查title是否获取成功
-        if not title:
-            print("[+]DEBUG-fanza: title is still empty after re-fetching cookies")
+            print(f"[+]DEBUG-fanza: Extracted title: {title}")
+        except Exception as e:
+            print(f"[-]Error extracting title: {e}")
     
-    # 解析htmlcode以获取数据
-    try:
+        # 解析htmlcode以获取数据
         print("[+]DEBUG-fanza-html: parse begin")
-        # DEBUG: 将html内容写入debug.html文件    
-        html = etree.fromstring(htmlcode, etree.HTMLParser())
+        
+        # 检查htmlcode是否有效
+        if not htmlcode or not isinstance(htmlcode, str):
+            print("[-]DEBUG-fanza: Invalid HTML content")
+            data = {"title": "", "website": "https://www.dmm.co.jp", "source": "fanza"}
+        else:
+            try:
+                # DEBUG: 将html内容写入debug.html文件    
+                html = etree.fromstring(htmlcode, etree.HTMLParser())
 
-        data = {
-            "title": title if title else fanza_Crawler.getMetadata('og:title').strip(),
-            "studio": fanza_Crawler.getStudio(),
-            "outline": '',
-            "runtime": '',
-            "director": '',
-            "actor": '',
-            "release": '',
-            "number": number,
-            "cover": fanza_Crawler.getMetadata('og:image').strip(),
-            "imagecut": 1,
-            "tag": '',
-            "extrafanart": '',
-            "label": '',
-            "year": '',
-            "actor_photo": '',
-            "website": "https://www.dmm.co.jp/dc/doujin/-/detail/=/cid=" + number,
-            "source": "fanza.py",
-            "series": '',
-        }
+                # 安全地获取metadata
+                def safe_get_metadata(meta_name):
+                    try:
+                        value = fanza_Crawler.getMetadata(meta_name)
+                        return value.strip() if value else ""
+                    except:
+                        return ""
+
+                data = {
+                    "title": title if title else safe_get_metadata('og:title'),
+                    "studio": fanza_Crawler.getStudio(),
+                    "outline": '',
+                    "runtime": '',
+                    "director": '',
+                    "actor": '',
+                    "release": '',
+                    "number": number,
+                    "cover": safe_get_metadata('og:image'),
+                    "imagecut": 1,
+                    "tag": '',
+                    "extrafanart": '',
+                    "label": '',
+                    "year": '',
+                    "actor_photo": '',
+                    "website": "https://www.dmm.co.jp/dc/doujin/-/detail/=/cid=" + number,
+                    "source": "fanza.py",
+                    "series": '',
+                }
+            except Exception as e:
+                print(f"[-]Error parsing HTML content: {str(e)}")
+                data = {
+                    "title": "",
+                    "website": "https://www.dmm.co.jp",
+                    "source": "fanza"
+                }
+    
+        js = json.dumps(
+            data, ensure_ascii=False, sort_keys=True, indent=4, separators=(",", ":")
+        )  # .encode('UTF-8')
+        return js
+        
     except Exception as e:
+        print(f"[-]Error in main function: {str(e)}")
         data = {
             "title": "",
+            "website": "https://www.dmm.co.jp",
+            "source": "fanza"
         }
-    js = json.dumps(
-        data, ensure_ascii=False, sort_keys=True, indent=4, separators=(",", ":")
-    )  # .encode('UTF-8')
-    return js
+        return json.dumps(data, ensure_ascii=False)
+    except:
+        # 捕获所有其他未预期的异常
+        print("[-]Unexpected error in main function")
+        data = {
+            "title": "",
+            "website": "https://www.dmm.co.jp",
+            "source": "fanza"
+        }
+        return json.dumps(data, ensure_ascii=False)
 
 
 # def main_htmlcode(number):
