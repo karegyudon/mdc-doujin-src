@@ -215,7 +215,7 @@ def getOutline(html):
         #result = html.xpath('//div[@class="work_parts type_text"]')
         for i in result:
             total.append(i.strip('\r\n'))
-        result = str(total).strip(" ['']").replace("', '', '", r'\n').replace("', '", r'\n').replace("\\u3000", r' ').strip(", '', '")
+        result = str(total).strip(" ['']").replace("', '', '", '\n').replace("', '", '\n').replace("\\u3000", r' ').strip(", '', '")
         # print("[+]DEBUG-getOutline:", result)
         return result
     except:

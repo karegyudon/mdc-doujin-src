@@ -413,7 +413,7 @@ def getOutline(html):
             for br in summary_tag.find_all('br'):
                 br.replace_with('\n')
 
-            result = summary_tag.get_text(separator='', strip=True)
+            result = summary_tag.get_text(separator='', strip=True).replace('<br>', '\n').replace('</br>', '\n')
             return result
         
         # 如果没有找到summary__txt类，则尝试原来的方法
