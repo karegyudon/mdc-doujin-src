@@ -242,17 +242,35 @@ def getExtrafanart(html):
         result = ''
     # print("[+]DEBUG-getExtrafanart:", result)
     return result
+
+def getWebsite(html):
+    try:
+        # 查找<link rel="canonical" ...>标签并提取href属性
+        result = html.xpath('//link[@rel="canonical"]/@href')[0]
+        # print("[+]DEBUG-getWebsite:", result)
+        return result
+    except:
+        # 如果找不到canonical link，返回空字符串
+        return ''
 def main(number):
     try:
         if "RJ" in number or "VJ" in number:
             number = number.upper()
-            target_url = 'https://www.dlsite.com/maniax/work/=/product_id/' + number + '.html/?locale=zh_CN'
-            print("[+]DEBUG:", str(target_url))
+            # target_url = 'https://www.dlsite.com/maniax/work/=/product_id/' + number + '.html/?locale=zh_CN'
+            target_url = 'https://www.dlsite.com/pro/announce/=/product_id/' + number + '.html/?locale=zh_CN'
+
+            # print("[+]DEBUG:", str(target_url))
             htmlcode = get_html(target_url, cookies={'locale': 'zh-cn'}, encoding='utf-8')
             # DEBUG: 将html内容写入debug.html文件
-            with open('debug.html', 'w', encoding='utf-8') as f:
-               f.write(htmlcode)
+            # with open('debug.html', 'w', encoding='utf-8') as f:
+            #    f.write(htmlcode)
             html = etree.fromstring(htmlcode, etree.HTMLParser())
+            # 检查是否存在错误提示
+            error_title = html.xpath('//title/text()')[0]
+            print("[+]DEBUG: title ", error_title)
+            if "错误" in error_title:
+                print("[-]ERROR:", error_title)
+                return None
         else:
             htmlcode = get_html(f'https://www.dlsite.com/maniax/fsr/=/language/jp/sex_category/male/keyword/{number}/order/trend/work_type_category/movie', cookies={'locale': 'zh-cn'})
             html = etree.HTML(htmlcode)
@@ -294,7 +312,7 @@ def main(number):
             'label': getSeries(html),
             'year': getYear(html),  # str(re.search('\d{4}',getRelease(a)).group()),
             'actor_photo': '',
-            'website': 'https://www.dlsite.com/maniax/work/=/product_id/' + number + '.html',
+            'website': getWebsite(html).replace("//?locale=zh_CN",""),
             'source': 'dlsite.py',
             'series': getSeries(html),
             'extrafanart':getExtrafanart(html),
