@@ -72,14 +72,19 @@ def get_info(json_data):  # 返回json里的数据
 
 
 def small_cover_check(path, filename, cover_small, movie_path, json_headers=None):
-    full_filepath = Path(path) / filename
-    if config.getInstance().download_only_missing_images() and not file_not_exist_or_empty(str(full_filepath)):
+    # filename is poster path
+    if not cover_small:
         return
+    poster_path = os.path.join(path, filename)
+    if file_not_exist_or_empty(poster_path):
+        return
+    # 小封面URL
     if json_headers != None:
         download_file_with_filename(cover_small, filename, path, movie_path, json_headers['headers'])
     else:
         download_file_with_filename(cover_small, filename, path, movie_path)
-    print('[+]Image Downloaded! ' + full_filepath.name)
+    # 不再复制为缩略图，只保留poster
+    print('[+]Image Downloaded! ' + filename)
 
 
 def create_folder(json_data):  # 创建文件夹
@@ -276,16 +281,19 @@ def image_ext(url):
 
 
 # 封面是否下载成功，否则移动到failed
+
 def image_download(cover, fanart_path, thumb_path, path, filepath, json_headers=None):
-    full_filepath = os.path.join(path, fanart_path)
+    # 直接下载到poster_path（重命名以兼容现有代码调用）
+    poster_path = f"{fanart_path.replace('-fanart', '-poster')}"
+    full_filepath = os.path.join(path, poster_path)
     if config.getInstance().download_only_missing_images() and not file_not_exist_or_empty(full_filepath):
         return
     if json_headers != None:
-        if download_file_with_filename(cover, fanart_path, path, filepath, json_headers['headers']) == 'failed':
+        if download_file_with_filename(cover, poster_path, path, filepath, json_headers['headers']) == 'failed':
             moveFailedFolder(filepath)
             return
     else:
-        if download_file_with_filename(cover, fanart_path, path, filepath) == 'failed':
+        if download_file_with_filename(cover, poster_path, path, filepath) == 'failed':
             moveFailedFolder(filepath)
             return
 
@@ -294,16 +302,16 @@ def image_download(cover, fanart_path, thumb_path, path, filepath, json_headers=
         if file_not_exist_or_empty(full_filepath):
             print('[!]Image Download Failed! Trying again. [{}/3]', i + 1)
             if json_headers != None:
-                download_file_with_filename(cover, fanart_path, path, filepath, json_headers['headers'])
+                download_file_with_filename(cover, poster_path, path, filepath, json_headers['headers'])
             else:
-                download_file_with_filename(cover, fanart_path, path, filepath)
+                download_file_with_filename(cover, poster_path, path, filepath)
             continue
         else:
             break
     if file_not_exist_or_empty(full_filepath):
         return
     print('[+]Image Downloaded!', Path(full_filepath).name)
-    shutil.copyfile(full_filepath, os.path.join(path, thumb_path))
+    # 不再生成thumb图像
 
 
 def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, filepath, tag, actor_list, liuchu, uncensored, hack_word,fanart_path,poster_path,thumb_path):
@@ -346,8 +354,7 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
             print("  <runtime>" + str(runtime).replace(" ", "") + "</runtime>", file=code)
             print("  <director>" + director + "</director>", file=code)
             print("  <poster>" + poster_path + "</poster>", file=code)
-            print("  <thumb>" + thumb_path + "</thumb>", file=code)
-            print("  <fanart>" + fanart_path +  "</fanart>", file=code)
+            # 移除thumb和fanart标签，只保留poster
             try:
                 for key in actor_list:
                     print("  <actor>", file=code)
@@ -448,12 +455,12 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
 
 def add_mark(poster_path, thumb_path, cn_sub, leak, uncensored, hack) -> None:
     """
-    add watermark on poster or thumb for describe extra properties 给海报和缩略图加属性水印
+    add watermark on poster for describe extra properties 给海报加属性水印
 
     此函数从gui版copy过来用用
 
     :poster_path 海报位置
-    :thumb_path 缩略图位置
+    :thumb_path 缩略图位置（不再使用）
     :cn_sub: 中文字幕 可选值：1,"1" 或其他值
     :uncensored 无码 可选值：1,"1" 或其他值
     :hack 破解 可选值：1,"1" 或其他值
@@ -469,8 +476,6 @@ def add_mark(poster_path, thumb_path, cn_sub, leak, uncensored, hack) -> None:
         mark_type += ',破解'
     if mark_type == '':
         return
-    add_mark_thread(thumb_path, cn_sub, leak, uncensored, hack)
-    print('[+]Thumb Add Mark:   ' + mark_type.strip(','))
     add_mark_thread(poster_path, cn_sub, leak, uncensored, hack)
     print('[+]Poster Add Mark:  ' + mark_type.strip(','))
 
@@ -706,13 +711,10 @@ def core_main_no_net_op(movie_path, number):
     hack = ''
     hack_word = ''
     imagecut = 1
-    multi = False
-    part = ''
     path = str(Path(movie_path).parent)
 
     if re.search(r'[-_]CD\d+', movie_path, re.IGNORECASE):
         part = re.findall(r'[-_]CD\d+', movie_path, re.IGNORECASE)[0].upper()
-        multi = True
     if re.search(r'[-_]C(\.\w+$|-\w+)|\d+ch(\.\w+$|-\w+)', movie_path,
             re.I) or '中文' in movie_path or '字幕' in movie_path or ".chs" in movie_path or '.cht' in movie_path:
         cn_sub = '1'
@@ -733,28 +735,28 @@ def core_main_no_net_op(movie_path, number):
             uncensored = 1
         try:
             nfo_xml = etree.parse(full_nfo)
-            nfo_fanart_path = nfo_xml.xpath('//fanart/text()')[0]
-            ext = Path(nfo_fanart_path).suffix
+            nfo_poster_path = nfo_xml.xpath('//poster/text()')[0]
+            ext = Path(nfo_poster_path).suffix
         except:
             return
     else:
         return
-    fanart_path =  f"{prestr}-fanart{ext}"
+    
+    # 只处理poster图像
     poster_path = f"{prestr}-poster{ext}"
-    thumb_path =  f"{prestr}-thumb{ext}"
-    full_fanart_path = os.path.join(path, fanart_path)
     full_poster_path = os.path.join(path, poster_path)
-    full_thumb_path = os.path.join(path, thumb_path)
 
-    if not all(os.path.isfile(f) for f in (full_fanart_path, full_thumb_path)):
+    # 检查poster文件是否存在
+    if not os.path.isfile(full_poster_path):
         return
 
-    cutImage(imagecut, path, fanart_path, poster_path, bool(conf.face_uncensored_only() and not uncensored))
+    # 只对poster进行裁剪
+    if 'poster' in locals():
+        cutImage(imagecut, path, None, poster_path, bool(conf.face_uncensored_only() and not uncensored))
+    
+    # 只对poster添加水印
     if conf.is_watermark():
-        add_mark(full_poster_path, full_thumb_path, cn_sub, leak, uncensored, hack)
-
-    if multi and conf.jellyfin_multi_part_fanart():
-        linkImage(path, number, part, leak_word, c_word, hack_word, ext)
+        add_mark(full_poster_path, None, cn_sub, leak, uncensored, hack)
 
 
 def core_main(movie_path, number_th, oCC):
@@ -867,12 +869,12 @@ def core_main(movie_path, number_th, oCC):
             except:
                 pass
 
-        # 裁剪图
-        cutImage(imagecut, path, fanart_path, poster_path, bool(conf.face_uncensored_only() and not uncensored))
+        # 不需要裁剪，因为已经直接下载到poster
+        # 跳过cutImage调用
 
-        # 添加水印
+        # 添加水印，只处理poster
         if conf.is_watermark():
-            add_mark(os.path.join(path,poster_path), os.path.join(path,thumb_path), cn_sub, leak, uncensored, hack)
+            add_mark(os.path.join(path,poster_path), None, cn_sub, leak, uncensored, hack)
 
         # 兼容Jellyfin封面图文件名规则
         if multi_part and conf.jellyfin_multi_part_fanart():
@@ -930,12 +932,12 @@ def core_main(movie_path, number_th, oCC):
             except:
                 pass
 
-        # 裁剪图
-        cutImage(imagecut, path, fanart_path, poster_path, bool(conf.face_uncensored_only() and not uncensored))
+        # 不需要裁剪，因为已经直接下载到poster
+        # 跳过cutImage调用
 
-        # 添加水印
+        # 添加水印，只处理poster
         if conf.is_watermark():
-            add_mark(os.path.join(path,poster_path), os.path.join(path,thumb_path), cn_sub, leak, uncensored, hack)
+            add_mark(os.path.join(path,poster_path), None, cn_sub, leak, uncensored, hack)
 
         # 兼容Jellyfin封面图文件名规则
         if multi_part and conf.jellyfin_multi_part_fanart():
