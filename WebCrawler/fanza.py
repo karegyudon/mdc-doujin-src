@@ -64,7 +64,7 @@ def get_html_from_browserless(url, max_retries=3, timeout=70):
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--headless')
             chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('--proxy-server=http://10.10.32.231:10821')
+            chrome_options.add_argument(f'--proxy-server={config.puppeteer_proxy()}')
             
             # 初始化WebDriver
             driver = webdriver.Remote(

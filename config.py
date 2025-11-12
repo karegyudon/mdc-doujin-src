@@ -313,6 +313,18 @@ class Config:
         except Exception:
             return "http://localhost:9222"
 
+    def puppeteer_proxy(self):
+        if not self.conf.has_section("puppeteer"):
+            return ""
+        try:
+            puppeteer_proxy = self.conf.get("puppeteer", "puppeteer_proxy")
+            if puppeteer_proxy.strip():
+                return puppeteer_proxy
+            else:
+                return ""
+        except Exception:
+            return ""
+
     def cacert_file(self) -> str:
         return self.conf.get('proxy', 'cacert_file')
 
