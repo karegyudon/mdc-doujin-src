@@ -489,6 +489,9 @@ def main(number):
         else:
             try:
                 # DEBUG: 将html内容写入debug.html文件    
+                # with open("debug.html", "w", encoding="utf-8") as f:
+                #     f.write(htmlcode)
+                
                 html = etree.fromstring(htmlcode, etree.HTMLParser())
 
                 # 安全地获取metadata

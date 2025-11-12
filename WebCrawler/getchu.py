@@ -18,7 +18,10 @@ GETCHU_DL_URL = 'https://dl.getchu.com/i/'
 def get_dl_getchu(number):
     url =  GETCHU_DL_URL+ number
     print("[+]DEBUG-dl_getchu:", url)
-    htmlcode = get_html(url, json_headers=JSON_HEADERS, cookies=COOKIES_DL)                            
+    htmlcode = get_html(url, json_headers=JSON_HEADERS, cookies=COOKIES_DL, encoding="EUC-JP")
+    # DEBUG: 将html内容写入debug.html文件    
+    with open("debug.html", "w", encoding="utf-8") as f:
+        f.write(htmlcode)
     getchu = Crawler(htmlcode)
     dic = {
         "title": getchu.getString("//div[contains(@style,'color: #333333; padding: 3px 0px 0px 5px;')]/text()"),
