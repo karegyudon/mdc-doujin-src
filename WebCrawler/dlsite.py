@@ -256,7 +256,7 @@ def main(number):
     try:
         if "RJ" in number or "VJ" in number:
             number = number.upper()
-            # target_url = 'https://www.dlsite.com/maniax/work/=/product_id/' + number + '.html/?locale=zh_CN'
+            # 首先尝试 announce URL
             target_url = 'https://www.dlsite.com/pro/announce/=/product_id/' + number + '.html/?locale=zh_CN'
 
             # print("[+]DEBUG:", str(target_url))
@@ -267,10 +267,18 @@ def main(number):
             html = etree.fromstring(htmlcode, etree.HTMLParser())
             # 检查是否存在错误提示
             error_title = html.xpath('//title/text()')[0]
-            print("[+]DEBUG: title ", error_title)
+            # print("[+]DEBUG: title ", error_title)
             if "错误" in error_title:
+                # 如果 announce URL 出错，尝试 work URL
                 print("[-]ERROR:", error_title)
-                return None
+                target_url = 'https://www.dlsite.com/pro/work/=/product_id/' + number + '.html/?locale=zh_CN'
+                print("[+]INFO: 尝试使用新URL格式:", target_url)
+                htmlcode = get_html(target_url, cookies={'locale': 'zh-cn'}, encoding='utf-8')
+                html = etree.fromstring(htmlcode, etree.HTMLParser())
+                error_title = html.xpath('//title/text()')[0]
+                if "错误" in error_title:
+                    print("[-]ERROR:", error_title)
+                    return None
         else:
             htmlcode = get_html(f'https://www.dlsite.com/maniax/fsr/=/language/jp/sex_category/male/keyword/{number}/order/trend/work_type_category/movie', cookies={'locale': 'zh-cn'})
             html = etree.HTML(htmlcode)
